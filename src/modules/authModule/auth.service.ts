@@ -1,7 +1,7 @@
-import { parse } from './../../../node_modules/zod/src/v4/core/parse';
+import { parse } from 'zod/src/v4/core/parse';
 import { NextFunction,Request,Response } from "express";
 import { ApplicationException, ValidationError } from "../../utils/Error";
-import{signupSchema} from "../userModule/user.validation"
+import{signupSchema} from "./auth.validation"
 import { userModel } from '../../DB/models/user.model';
 import bcrypt, { hash } from "bcrypt";
 import { createOtp, emailEmitter } from '../../utils/sendEmail/emailEvent';

@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const validation_middleware_1 = require("../../middleware/validation.middleware");
+const user_service_1 = require("./user.service");
+const express_1 = require("express");
+const user_validation_1 = require("./user.validation");
+const router = (0, express_1.Router)();
+const userServices = new user_service_1.UserServices();
+router.post('/signup', (0, validation_middleware_1.validation)(user_validation_1.signupSchema), userServices.signUp);
+router.post('/login', userServices.login);
+router.post('/confirm-email', userServices.confirmEmail);
+exports.default = router;

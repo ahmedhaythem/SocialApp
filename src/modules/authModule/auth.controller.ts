@@ -1,7 +1,7 @@
 import { validation } from '../../middleware/validation.middleware';
-import { UserServices } from './user.service';
+import { UserServices } from './auth.service';
 import { Router } from "express";
-import { signupSchema } from './user.validation';
+import { signupSchema } from './auth.validation';
 const router= Router()
 
 const userServices=new UserServices()
