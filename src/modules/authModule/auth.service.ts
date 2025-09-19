@@ -1,46 +1,56 @@
-import { parse } from 'zod/src/v4/core/parse';
+import { email } from 'zod';
+import { forgetPasswordSchema } from './auth.validation';
+import { IUser, UserModel } from './../../DB/models/user.model';
 import { NextFunction,Request,Response } from "express";
-import { ApplicationException, ValidationError } from "../../utils/Error";
-import{signupSchema} from "./auth.validation"
-import { userModel } from '../../DB/models/user.model';
-import bcrypt, { hash } from "bcrypt";
+import { ApplicationException, InvalidOTPException, NotConfirmedException, NotFoundException, NotValidEmail, ValidationError } from "../../utils/Error";
+import bcrypt, { compare,hash } from "bcrypt";
 import { createOtp, emailEmitter } from '../../utils/sendEmail/emailEvent';
-
-
-interface IUserServices{
+import { UserRepo } from './auth.repo';
+import { forgetPasswordDTO, loginDTO, resendOtpDTO } from './auth.DTO';
+import { successHandler } from '../../utils/successHandler';
+import { createJwt } from '../../utils/jwt';
+import { nanoid } from 'nanoid';
+import { decodeToken, IRequest, TokenTypesEnum } from '../../middleware/auth.middleware';
+import { createHash } from 'crypto';
+interface IAuthServices{
     signUp(req:Request,res:Response,next:NextFunction): Promise<Response>,
     login(req:Request,res:Response,next:NextFunction): Promise<Response>,
     confirmEmail(req:Request,res:Response,next:NextFunction): Promise<Response>,
+    resendOtp(req:Request,res:Response,next:NextFunction): Promise<Response>,
 }
 
 
 
-export class UserServices implements IUserServices{
+export class AuthServices implements IAuthServices{
+    private userModel=new UserRepo()
+
     constructor(){}
-    async signUp(req:Request,res:Response,next:NextFunction): Promise<Response>{
+    signUp=async (req:Request,res:Response,next:NextFunction): Promise<Response>=>{
         const {name,email,password,phone}=req.body
-        const existing=await userModel.findOne({email})
+        const existing=await this.userModel.findByEmail({email})
 
         if(existing){
-            return res.status(400).json({error: "email already exits"})
+            throw new NotValidEmail()
         }
 
 
         const otp=createOtp()
-        const hashedOtp = await hash(otp, 10);
-        const newUser=new userModel({
-            name,
-            email,
-            password,
-            phone,
-            emailOtp:{
-            otp:hashedOtp,
-            expireIn:Date.now()+ 2 * 60 * 1000
-    } 
-        })
+        const hashedOtp = await hash(otp, 10);        
+            const newUser=await this.userModel.create({
+                data:{
+                    name,
+                    email,
+                    password,
+                    phone,
+                    emailOtp:{
+                        otp:hashedOtp,
+                        expireIn:new Date(Date.now()+ 2 * 60 * 1000)
+                    } 
+                }
+            })
 
         await newUser.save()
-        emailEmitter.emit('confirmEmail',{email:newUser.email,otp,userName:newUser.name})
+        emailEmitter.emit('sendPasswrodOTP',{email:newUser.email,otp,userName:newUser.name})
         return res.status(201).json({ message: "User created" });
 
     }
@@ -48,8 +58,8 @@ export class UserServices implements IUserServices{
 
 
     async login(req: Request, res: Response, next: NextFunction): Promise<Response> {
-        const {email,password}=req.body
-        const user= await userModel.findOne({email})
+        const {email,password}:loginDTO=req.body
+        const user= await UserModel.findOne({email})
 
         if(!email || !password){
             return res.status(404).json({error:"email amd password are required"})
@@ -62,7 +72,33 @@ export class UserServices implements IUserServices{
         if(!user.confirmed){
             return res.status(400).json({error:"email not confirmed"})
         }
-        return res.status(200).json({msg:"Login successfully"})
+
+        
+        const jti=nanoid()
+        const accessToken:string=createJwt({
+            id:user._id,
+
+        },
+        process.env.ACCESS_SIGNATURE as string,
+        {
+            jwtid:jti,
+            expiresIn: "1H"
+        }
+    )
+
+
+        const refreshToken:string=createJwt({
+            jwtid:jti,
+            id:user._id,
+
+        },
+        process.env.REFRESH_SIGNATURE as string,
+        {
+            expiresIn: "7 D"
+        }
+    )
+
+        return res.status(200).json({msg:"Login successfully",accessToken:accessToken,refreshToken:refreshToken})
     }
 
 
@@ -74,7 +110,7 @@ export class UserServices implements IUserServices{
             return res.status(400).json({error:"email and OTP are required "})
         }
 
-        const user =await userModel.findOne({email})
+        const user =await UserModel.findOne({email})
 
         if (!user) {
             return res.status(404).json({error:"User not found"})
@@ -83,8 +119,8 @@ export class UserServices implements IUserServices{
 
         if (user.otpBanUntil && user.otpBanUntil.getTime() > Date.now()) {
             const remaining = Math.ceil((user.otpBanUntil.getTime() - Date.now()) / 1000);
-        return res.status(403).json({
-            error: `Too many failed attempts. Try again in ${remaining} seconds.`,
+            return res.status(403).json({
+                error: `Too many failed attempts. Try again in ${remaining} seconds.`,
             });
         }
 
@@ -118,5 +154,121 @@ export class UserServices implements IUserServices{
         return res.status(200).json({message:"Email verified successfully"})
 }
 
+
+    resendOtp=async (req:Request, res:Response,next:NextFunction) :Promise<Response>=>{
+        const {email}:resendOtpDTO=req.body
+        const user=await this.userModel.findByEmail({email})
+        if(!user){
+            throw new NotFoundException("user not found")
+        }
+
+        if(user.confirmed){
+            throw new ApplicationException("you are already confirmed",409)
+        }
+
+        if(user.email && user.emailOtp.expireIn.getTime()>Date.now()){
+            throw new ApplicationException('old otp expierd, wait five minutes',400)
+        }
+
+
+        const otp=createOtp()
+        const hashedOtp = await hash(otp, 10);
+        emailEmitter.emit('confirmEmail',{email:user.email,otp,userName:user.name})
+        user.emailOtp={
+            expireIn:new Date(Date.now()+5*60*100),
+            otp:hashedOtp
+        }
+        user.save()
+        return successHandler({res,data:user})
+        
+    }
+
+
+    refreshToken=async(req:Request, res:Response)=>{
+        const authorization=req.headers.authorization
+        const {user,payload} =await decodeToken({authorization,tokenTypes:TokenTypesEnum.referesh})
+        
+        
+        const accessToken:string=createJwt({
+            id:user._id,
+
+        },
+        process.env.ACCESS_SIGNATURE as string,
+        {
+            jwtid:String(payload.jti),
+            expiresIn: "1H"
+        }
+    )
+    
+    
+    return successHandler({res,
+            data:{
+                accessToken
+            }
+        })
+    }
+
+
+
+    getUser=async(req: Request, res: Response, next: NextFunction): Promise <Response> => {
+        
+        const user:IUser=res.locals.user
+        return successHandler({res,data:user})
+    }
+
+    forgetPassword=async(req: Request, res: Response, next: NextFunction): Promise <Response> => {
+        const {email}:forgetPasswordDTO=req.body
+        const user=await this.userModel.findByEmail({email})
+        if(!user){
+            throw new NotFoundException("user not found")
+        }
+
+        if(!user.confirmed){
+            throw new NotConfirmedException()
+        }
+
+        const otp=createOtp()
+        const hashedOtp = await hash(otp, 10);
+        emailEmitter.emit('sendPasswrodOTP',{email:user.email,otp,userName:user.name})
+
+        user.passwordOtp={
+            otp:hashedOtp,
+            expireIn:new Date(Date.now()+5*60*1000)
+        }
+        await user.save()
+        return successHandler({res})
+
+    }
+
+    resetPassword=async (req: Request, res: Response, next: NextFunction): Promise <Response> => {
+        const {email,otp,password}=req.body
+        const user=await this.userModel.findByEmail({email})
+
+        if(!user){
+            throw new NotConfirmedException("user not found")
+        }
+
+        if(!user.passwordOtp?.otp){
+            throw new ApplicationException("user forget password first",409)
+        }
+
+        if(user.passwordOtp?.expireIn.getTime()<=Date.now()){
+            throw new ApplicationException('old otp expierd, wait five minutes',400)
+        }
+
+        const isMatch = await compare(otp, user.passwordOtp.otp);
+        if(!isMatch){
+            throw new InvalidOTPException()
+        }
+        
+        await user.updateOne({
+            password:await bcrypt.hash(password, 10),
+            isCredentialsUpdated:new Date(Date.now()),
+            $unset:{
+                passwordOtp:""
+            }
+        })
+        return successHandler({res})
+    }
 
 }

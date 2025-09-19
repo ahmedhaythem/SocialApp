@@ -1,18 +1,22 @@
 import { model, Schema } from "mongoose"
 import bcrypt from "bcrypt";
 
+type OtpType={
+    otp:string,
+    expireIn:Date
+}
+
 export interface IUser{
     name:string,
     email:string,
     password:string,
     confirmed:boolean,
-    emailOtp:{
-        otp:string,
-        expireIn:Date
-    },
+    emailOtp:OtpType,
+    passwordOtp?:OtpType,
     phone:string,
     failedOtpAttempts: number,
     otpBanUntil: Date | null,
+    isCredentialsUpdated:Date
 }
 
 const userSchema=new Schema<IUser>({
@@ -36,11 +40,17 @@ const userSchema=new Schema<IUser>({
         otp: String,
         expireIn: Date,
     },
+    passwordOtp:{
+        otp: String,
+        expireIn: Date,
+    },
+
     phone: {
         type:String
     },
     failedOtpAttempts: { type: Number, default: 0 },
     otpBanUntil: { type: Date , default: null },
+    isCredentialsUpdated: Date
 },{
     timestamps:true,
     toJSON:{
@@ -57,4 +67,4 @@ userSchema.pre("save", async function () {
     }
 });
 
-export const userModel=model<IUser>("user",userSchema)
+export const UserModel=model<IUser>("user",userSchema)

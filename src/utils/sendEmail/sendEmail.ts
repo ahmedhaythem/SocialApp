@@ -21,7 +21,7 @@ export const sendEmail= async({to, subject,html}:{to:string, subject:string, htm
 
     const main=async () => {
         const info=await transporter.sendMail({
-            from:`sarahaApp "<${process.env.EmailUser}>"`,
+            from:`socialApp "<${process.env.EmailUser}>"`,
             to,
             subject,
             html

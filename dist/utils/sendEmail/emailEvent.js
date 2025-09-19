@@ -22,3 +22,14 @@ exports.emailEmitter.on('confirmEmail', async ({ email, userName, otp }) => {
     });
     console.log("email sent");
 });
+exports.emailEmitter.on('sendPasswrodOTP', async ({ email, userName, otp }) => {
+    console.log("email sending...");
+    const subject = "forget password";
+    const html = (0, generatedHTML_1.template)(otp, userName, subject);
+    await (0, sendEmail_1.sendEmail)({
+        to: email,
+        html,
+        subject
+    });
+    console.log("email sent");
+});

@@ -1,15 +1,21 @@
+import { auth } from './../../middleware/auth.middleware';
 import { validation } from '../../middleware/validation.middleware';
-import { UserServices } from './auth.service';
+import { AuthServices } from './auth.service';
 import { Router } from "express";
-import { signupSchema } from './auth.validation';
+import * as authValidation from './auth.validation';
 const router= Router()
 
-const userServices=new UserServices()
+const authServices=new AuthServices()
 
 
-router.post('/signup',validation(signupSchema),userServices.signUp)
-router.post('/login',userServices.login)
-router.post('/confirm-email',userServices.confirmEmail)
+router.post('/signup',validation(authValidation.signupSchema),authServices.signUp)
+router.post('/login',validation(authValidation.loginSchema),authServices.login)
+router.patch('/confirm-email',authServices.confirmEmail)
+router.patch("/resend-otp",validation(authValidation.resendOtp),authServices.resendOtp)
+router.get("/me",auth(),authServices.getUser)
+router.post("/refresh-token",authServices.refreshToken)
+router.patch("/forget-password",validation(authValidation.forgetPasswordSchema),authServices.forgetPassword)
+router.patch("/reset-password",authServices.resetPassword)
 
 
 export default router 

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.signupSchema = void 0;
+exports.forgetPasswordSchema = exports.loginSchema = exports.resendOtp = exports.signupSchema = void 0;
 const zod_1 = __importDefault(require("zod"));
 exports.signupSchema = zod_1.default.object({
     name: zod_1.default.string().min(3).max(15),
@@ -18,4 +18,14 @@ exports.signupSchema = zod_1.default.object({
             message: 'confirm password must be equal to password'
         });
     }
+});
+exports.resendOtp = zod_1.default.object({
+    email: zod_1.default.email()
+});
+exports.loginSchema = zod_1.default.object({
+    email: zod_1.default.email(),
+    password: zod_1.default.string().min(8).max(20)
+});
+exports.forgetPasswordSchema = zod_1.default.object({
+    email: zod_1.default.email()
 });

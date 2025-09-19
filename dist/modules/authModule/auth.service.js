@@ -33,37 +33,46 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserServices = void 0;
-const user_model_1 = require("../../DB/models/user.model");
+exports.AuthServices = void 0;
+const user_model_1 = require("./../../DB/models/user.model");
+const Error_1 = require("../../utils/Error");
 const bcrypt_1 = __importStar(require("bcrypt"));
 const emailEvent_1 = require("../../utils/sendEmail/emailEvent");
-class UserServices {
+const auth_repo_1 = require("./auth.repo");
+const successHandler_1 = require("../../utils/successHandler");
+const jwt_1 = require("../../utils/jwt");
+const nanoid_1 = require("nanoid");
+const auth_middleware_1 = require("../../middleware/auth.middleware");
+class AuthServices {
+    userModel = new auth_repo_1.UserRepo();
     constructor() { }
-    async signUp(req, res, next) {
+    signUp = async (req, res, next) => {
         const { name, email, password, phone } = req.body;
-        const existing = await user_model_1.userModel.findOne({ email });
+        const existing = await this.userModel.findByEmail({ email });
         if (existing) {
-            return res.status(400).json({ error: "email already exits" });
+            throw new Error_1.NotValidEmail();
         }
         const otp = (0, emailEvent_1.createOtp)();
         const hashedOtp = await (0, bcrypt_1.hash)(otp, 10);
-        const newUser = new user_model_1.userModel({
-            name,
-            email,
-            password,
-            phone,
-            emailOtp: {
-                otp: hashedOtp,
-                expireIn: Date.now() + 2 * 60 * 1000
+        const newUser = await this.userModel.create({
+            data: {
+                name,
+                email,
+                password,
+                phone,
+                emailOtp: {
+                    otp: hashedOtp,
+                    expireIn: new Date(Date.now() + 2 * 60 * 1000)
+                }
             }
         });
         await newUser.save();
-        emailEvent_1.emailEmitter.emit('confirmEmail', { email: newUser.email, otp, userName: newUser.name });
+        emailEvent_1.emailEmitter.emit('sendPasswrodOTP', { email: newUser.email, otp, userName: newUser.name });
         return res.status(201).json({ message: "User created" });
-    }
+    };
     async login(req, res, next) {
         const { email, password } = req.body;
-        const user = await user_model_1.userModel.findOne({ email });
+        const user = await user_model_1.UserModel.findOne({ email });
         if (!email || !password) {
             return res.status(404).json({ error: "email amd password are required" });
         }
@@ -73,14 +82,27 @@ class UserServices {
         if (!user.confirmed) {
             return res.status(400).json({ error: "email not confirmed" });
         }
-        return res.status(200).json({ msg: "Login successfully" });
+        const jti = (0, nanoid_1.nanoid)();
+        const accessToken = (0, jwt_1.createJwt)({
+            id: user._id,
+        }, process.env.ACCESS_SIGNATURE, {
+            jwtid: jti,
+            expiresIn: "1H"
+        });
+        const refreshToken = (0, jwt_1.createJwt)({
+            jwtid: jti,
+            id: user._id,
+        }, process.env.REFRESH_SIGNATURE, {
+            expiresIn: "7 D"
+        });
+        return res.status(200).json({ msg: "Login successfully", accessToken: accessToken, refreshToken: refreshToken });
     }
     async confirmEmail(req, res, next) {
         const { email, otp } = req.body;
         if (!email || !otp) {
             return res.status(400).json({ error: "email and OTP are required " });
         }
-        const user = await user_model_1.userModel.findOne({ email });
+        const user = await user_model_1.UserModel.findOne({ email });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
@@ -111,5 +133,90 @@ class UserServices {
         await user.save();
         return res.status(200).json({ message: "Email verified successfully" });
     }
+    resendOtp = async (req, res, next) => {
+        const { email } = req.body;
+        const user = await this.userModel.findByEmail({ email });
+        if (!user) {
+            throw new Error_1.NotFoundException("user not found");
+        }
+        if (user.confirmed) {
+            throw new Error_1.ApplicationException("you are already confirmed", 409);
+        }
+        if (user.email && user.emailOtp.expireIn.getTime() > Date.now()) {
+            throw new Error_1.ApplicationException('old otp expierd, wait five minutes', 400);
+        }
+        const otp = (0, emailEvent_1.createOtp)();
+        const hashedOtp = await (0, bcrypt_1.hash)(otp, 10);
+        emailEvent_1.emailEmitter.emit('confirmEmail', { email: user.email, otp, userName: user.name });
+        user.emailOtp = {
+            expireIn: new Date(Date.now() + 5 * 60 * 100),
+            otp: hashedOtp
+        };
+        user.save();
+        return (0, successHandler_1.successHandler)({ res, data: user });
+    };
+    refreshToken = async (req, res) => {
+        const authorization = req.headers.authorization;
+        const { user, payload } = await (0, auth_middleware_1.decodeToken)({ authorization, tokenTypes: auth_middleware_1.TokenTypesEnum.referesh });
+        const accessToken = (0, jwt_1.createJwt)({
+            id: user._id,
+        }, process.env.ACCESS_SIGNATURE, {
+            jwtid: String(payload.jti),
+            expiresIn: "1H"
+        });
+        return (0, successHandler_1.successHandler)({ res,
+            data: {
+                accessToken
+            }
+        });
+    };
+    getUser = async (req, res, next) => {
+        const user = res.locals.user;
+        return (0, successHandler_1.successHandler)({ res, data: user });
+    };
+    forgetPassword = async (req, res, next) => {
+        const { email } = req.body;
+        const user = await this.userModel.findByEmail({ email });
+        if (!user) {
+            throw new Error_1.NotFoundException("user not found");
+        }
+        if (!user.confirmed) {
+            throw new Error_1.NotConfirmedException();
+        }
+        const otp = (0, emailEvent_1.createOtp)();
+        const hashedOtp = await (0, bcrypt_1.hash)(otp, 10);
+        emailEvent_1.emailEmitter.emit('sendPasswrodOTP', { email: user.email, otp, userName: user.name });
+        user.passwordOtp = {
+            otp: hashedOtp,
+            expireIn: new Date(Date.now() + 5 * 60 * 1000)
+        };
+        await user.save();
+        return (0, successHandler_1.successHandler)({ res });
+    };
+    resetPassword = async (req, res, next) => {
+        const { email, otp, password } = req.body;
+        const user = await this.userModel.findByEmail({ email });
+        if (!user) {
+            throw new Error_1.NotConfirmedException("user not found");
+        }
+        if (!user.passwordOtp?.otp) {
+            throw new Error_1.ApplicationException("user forget password first", 409);
+        }
+        if (user.passwordOtp?.expireIn.getTime() <= Date.now()) {
+            throw new Error_1.ApplicationException('old otp expierd, wait five minutes', 400);
+        }
+        const isMatch = await (0, bcrypt_1.compare)(otp, user.passwordOtp.otp);
+        if (!isMatch) {
+            throw new Error_1.InvalidOTPException();
+        }
+        await user.updateOne({
+            password: await bcrypt_1.default.hash(password, 10),
+            isCredentialsUpdated: new Date(Date.now()),
+            $unset: {
+                passwordOtp: ""
+            }
+        });
+        return (0, successHandler_1.successHandler)({ res });
+    };
 }
-exports.UserServices = UserServices;
+exports.AuthServices = AuthServices;

@@ -27,3 +27,19 @@ emailEmitter.on('confirmEmail',async ({email,userName,otp})=>{
     
     console.log("email sent");
 })
+
+emailEmitter.on('sendPasswrodOTP',async ({email,userName,otp})=>{
+    console.log("email sending...");
+    
+
+    const subject="forget password"
+    const html=template(otp,userName,subject)
+
+    await sendEmail({
+        to:email,
+        html,
+        subject
+    })
+
+    console.log("email sent");
+})

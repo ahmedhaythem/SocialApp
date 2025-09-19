@@ -21,3 +21,45 @@ export class ValidationError extends ApplicationException{
         
     }
 }
+
+export class NotValidEmail extends ApplicationException{
+    constructor(msg:string="not vaild email"){
+        super(msg,400)
+        console.log(this.stack);
+        
+    }
+}
+
+
+export class NotFoundException extends ApplicationException{
+    constructor(msg:string="not found"){
+        super(msg,404)
+        console.log(this.stack);
+        
+    }
+}
+
+
+export class InvalidTokenException extends ApplicationException{
+    constructor(msg:string="in-valid token"){
+        super(msg,409)
+        console.log(this.stack);
+        
+    }
+}
+
+export class InvalidOTPException extends ApplicationException{
+    constructor(msg:string="in-valid OTP"){
+        super(msg,409)
+        console.log(this.stack);
+        
+    }
+}
+
+export class NotConfirmedException extends ApplicationException{
+    constructor(msg:string="user not confirmed"){
+        super(msg,401)
+        console.log(this.stack);
+        
+    }
+}
