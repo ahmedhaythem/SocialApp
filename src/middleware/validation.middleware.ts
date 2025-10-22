@@ -9,7 +9,12 @@ export const validation=(schema:z.ZodObject)=>{
             ...req.body,
             ...req.params,
             ...req.query,
+            files:req.files,
+            ...req.file
         }
+        // console.log(req.files);
+        
+
         const result=schema.safeParse(data)
         if(!result.success){
             const errors = result.error.issues.map((error)=>{

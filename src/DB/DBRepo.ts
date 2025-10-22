@@ -33,4 +33,17 @@ export abstract class DBRepo<T>{
 
         return doc
     }
+
+    find= async({filter, projection, options}:{filter?:FilterQuery<T>, projection?: ProjectionFields<T>, options?: QueryOptions}):Promise<HydratedDocument<T>[]|[]>=>{
+        const query= this.model.find(
+            filter || {},
+            projection,
+            options
+        )
+        if(options?.lean){
+            query.lean()
+        }
+        const docs =await query.exec()
+        return docs
+    }
 }

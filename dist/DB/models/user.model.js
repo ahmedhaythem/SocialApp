@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserModel = void 0;
 const mongoose_1 = require("mongoose");
 const bcrypt_1 = __importDefault(require("bcrypt"));
+const crypto_1 = require("crypto");
 const userSchema = new mongoose_1.Schema({
     name: {
         type: String,
@@ -36,7 +37,8 @@ const userSchema = new mongoose_1.Schema({
     },
     failedOtpAttempts: { type: Number, default: 0 },
     otpBanUntil: { type: Date, default: null },
-    isCredentialsUpdated: Date
+    isCredentialsUpdated: Date,
+    deleteAt: Date
 }, {
     timestamps: true,
     toJSON: {
@@ -44,11 +46,38 @@ const userSchema = new mongoose_1.Schema({
     },
     toObject: {
         virtuals: true
-    }
+    },
+    strictQuery: true
 });
 userSchema.pre("save", async function () {
     if (this.isModified("password")) {
         this.password = await bcrypt_1.default.hash(this.password, 10);
     }
+});
+userSchema.pre(['findOne', 'find'], function (next) {
+    const query = this.getQuery();
+    console.log({
+        this: this,
+        query: this.getQuery()
+    });
+    if (query.paranoId === false) {
+        this.setQuery({ ...query });
+    }
+    else {
+        this.setQuery({ ...this.getQuery(), deleteAt: { $exists: false } });
+    }
+    next();
+});
+userSchema.pre('updateOne', function (next) {
+    const update = this.getUpdate();
+    console.log({ update });
+    if (update.deleteAt) {
+        this.setUpdate({ ...update, isCredentialsUpdated: new Date() });
+    }
+    if (update.password) {
+        const hashedpassword = (0, crypto_1.createHash)(update.password);
+        this.setUpdate({ ...update, password: hashedpassword, isCredentialsUpdated: new Date() });
+    }
+    next();
 });
 exports.UserModel = (0, mongoose_1.model)("user", userSchema);

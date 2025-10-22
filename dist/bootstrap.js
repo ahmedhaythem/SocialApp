@@ -26,6 +26,27 @@ const bootstrap = async () => {
             stack: err.stack
         });
     });
+    // const test=async()=>{
+    //     try {
+    //         const userModel=new UserRepo()
+    //         const user=await userModel.findOne({
+    //             filter:{
+    //                 // _id:"68cd4c998522ac2e69eb4269",
+    //                 _id:"68cd4c998522ac2e69eb4269",
+    //                 paranoId:false
+    //             },
+    //         })
+    //         if(!user){
+    //             throw new Error("User not Found")
+    //         }
+    //         console.log({user});
+    //         // user.deleteAt=new Date(Date.now())
+    //         // await user.save()
+    //     } catch (error) {
+    //         console.log({error});
+    //     }
+    // }
+    // test()
     app.listen(port, () => {
         console.log("Server is running on port: " + port);
     });

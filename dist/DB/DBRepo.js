@@ -18,5 +18,13 @@ class DBRepo {
         const doc = await this.model.findById(id, projection, options);
         return doc;
     };
+    find = async ({ filter, projection, options }) => {
+        const query = this.model.find(filter || {}, projection, options);
+        if (options?.lean) {
+            query.lean();
+        }
+        const docs = await query.exec();
+        return docs;
+    };
 }
 exports.DBRepo = DBRepo;

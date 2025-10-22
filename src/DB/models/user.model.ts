@@ -1,5 +1,7 @@
-import { model, Schema } from "mongoose"
+import { HydratedDocument, model, Schema, UpdateQuery } from "mongoose"
 import bcrypt from "bcrypt";
+import tr from "zod/v4/locales/tr.cjs";
+import { createHash } from "crypto";
 
 type OtpType={
     otp:string,
@@ -16,7 +18,8 @@ export interface IUser{
     phone:string,
     failedOtpAttempts: number,
     otpBanUntil: Date | null,
-    isCredentialsUpdated:Date
+    isCredentialsUpdated:Date,
+    deleteAt:Date
 }
 
 const userSchema=new Schema<IUser>({
@@ -50,7 +53,8 @@ const userSchema=new Schema<IUser>({
     },
     failedOtpAttempts: { type: Number, default: 0 },
     otpBanUntil: { type: Date , default: null },
-    isCredentialsUpdated: Date
+    isCredentialsUpdated: Date,
+    deleteAt:Date
 },{
     timestamps:true,
     toJSON:{
@@ -58,7 +62,8 @@ const userSchema=new Schema<IUser>({
     },
     toObject:{
         virtuals:true
-    }
+    },
+    strictQuery:true
 })
 
 userSchema.pre("save", async function () {
@@ -66,5 +71,36 @@ userSchema.pre("save", async function () {
         this.password = await bcrypt.hash(this.password, 10);
     }
 });
+
+userSchema.pre(['findOne','find'],function(next){
+    const query=this.getQuery()
+    console.log({
+        this:this,
+        query:this.getQuery()
+    });
+    if(query.paranoId===false){
+        this.setQuery({...query})
+    }else{
+        this.setQuery({...this.getQuery(), deleteAt:{$exists:false}})
+    }
+
+    
+    next()
+    
+})
+
+userSchema.pre('updateOne',function(next){
+    const update=this.getUpdate() as UpdateQuery<HydratedDocument<IUser>>
+    console.log({update});
+    if(update.deleteAt){
+        this.setUpdate({...update, isCredentialsUpdated:new Date()})
+    }
+
+    if(update.password){
+        const hashedpassword=createHash(update.password as string)
+        this.setUpdate({...update, password:hashedpassword, isCredentialsUpdated:new Date()})
+    }
+    next()
+})
 
 export const UserModel=model<IUser>("user",userSchema)
