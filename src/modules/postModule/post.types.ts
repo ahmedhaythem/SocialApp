@@ -8,17 +8,17 @@ export enum PostAvailabilityEnum{
 }
 
 export interface IPost{
-    content:string
-    attachment:string
+    content?:string
+    attachment?:string
     createdBy:Types.ObjectId
     availability:PostAvailabilityEnum
     allowComments:Boolean
     likes:Array<Types.ObjectId>
     tags:Array<Types.ObjectId>
-    isDeleted:Boolean
+    isDeleted?:Boolean
     assestsFolderId:string
-    createdAt:Date
-    updatedAt:Date
+    createdAt?:Date
+    updatedAt?:Date
 }
 
 export type PostDocument=HydratedDocument<IPost>

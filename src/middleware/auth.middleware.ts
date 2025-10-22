@@ -55,7 +55,7 @@ export const decodeToken= async({authorization, tokenTypes=TokenTypesEnum.access
         throw new NotConfirmedException()
     }
 
-    if(user.isCredentialsUpdated.getTime()>=payload.iat*1000){
+    if(user.isCredentialsUpdated?.getTime()>=payload.iat*1000){
         throw new ApplicationException('please login again',409)
     }
 

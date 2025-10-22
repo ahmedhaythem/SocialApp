@@ -42,13 +42,15 @@ const express_1 = require("express");
 const postValidation = __importStar(require("./post.validation"));
 const validation_middleware_1 = require("../../middleware/validation.middleware");
 const multer_1 = __importDefault(require("multer"));
+const auth_middleware_1 = require("../../middleware/auth.middleware");
 const upload = (0, multer_1.default)();
 const router = (0, express_1.Router)();
 exports.postRoutes = {
     base: "/posts",
-    createPost: "/"
+    createPost: "/",
+    likePost: '/like-unlike'
 };
 const postservices = new post_service_1.PostServices();
-router.post(exports.postRoutes.createPost, upload.array("attachments"), (0, validation_middleware_1.validation)(postValidation.createPostSchema), postservices.createPost);
-//
+router.post(exports.postRoutes.createPost, (0, auth_middleware_1.auth)(), upload.array("attachments"), (0, validation_middleware_1.validation)(postValidation.createPostSchema), postservices.createPost);
+router.patch(exports.postRoutes.likePost, (0, auth_middleware_1.auth)(), postservices.likePost);
 exports.default = router;

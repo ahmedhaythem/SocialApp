@@ -33,9 +33,31 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PostModel = void 0;
+exports.PostModel = exports.availabilityConditon = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const post_types_1 = require("../../modules/postModule/post.types");
+const availabilityConditon = (user) => {
+    return [
+        {
+            availability: post_types_1.PostAvailabilityEnum.PUBLIC
+        },
+        {
+            availability: post_types_1.PostAvailabilityEnum.PRIVATE,
+            createdBy: user._id
+        },
+        {
+            availability: post_types_1.PostAvailabilityEnum.FRIENDS,
+            createdBy: {
+                $in: [...user.friends, user._id]
+            }
+        },
+        {
+            availability: post_types_1.PostAvailabilityEnum.PRIVATE,
+            tags: { $in: user._id }
+        }
+    ];
+};
+exports.availabilityConditon = availabilityConditon;
 const postSchema = new mongoose_1.Schema({
     content: { type: String },
     attachment: [{
@@ -56,12 +78,12 @@ const postSchema = new mongoose_1.Schema({
         default: true
     },
     likes: [{
-            types: mongoose_1.default.Schema.Types.ObjectId,
+            type: mongoose_1.default.Schema.Types.ObjectId,
             ref: 'user',
             required: true
         }],
     tags: [{
-            types: mongoose_1.default.Schema.Types.ObjectId,
+            type: mongoose_1.default.Schema.Types.ObjectId,
             ref: 'user',
             required: true
         }],

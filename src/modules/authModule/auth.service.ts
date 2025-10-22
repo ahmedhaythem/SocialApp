@@ -219,6 +219,7 @@ export class AuthServices implements IAuthServices{
     forgetPassword=async(req: Request, res: Response, next: NextFunction): Promise <Response> => {
         const {email}:forgetPasswordDTO=req.body
         const user=await this.userModel.findByEmail({email})
+        
         if(!user){
             throw new NotFoundException("user not found")
         }

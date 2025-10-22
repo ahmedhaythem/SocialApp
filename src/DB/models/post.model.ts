@@ -1,6 +1,30 @@
-import mongoose, { model, Schema, Types } from "mongoose";
+import mongoose, { HydratedDocument, model, Schema, Types } from "mongoose";
 import { IPost, PostAvailabilityEnum } from "../../modules/postModule/post.types";
+import { IUser } from "./user.model";
 
+
+
+export const availabilityConditon=(user:HydratedDocument<IUser>)=>{
+    return[
+        {
+                        availability:PostAvailabilityEnum.PUBLIC
+                    },
+                    {
+                        availability:PostAvailabilityEnum.PRIVATE,
+                        createdBy:user._id
+                    },
+                    {
+                        availability:PostAvailabilityEnum.FRIENDS,
+                        createdBy:{
+                            $in:[...user.friends, user._id]
+                        }
+                    },
+                    {
+                        availability:PostAvailabilityEnum.PRIVATE,
+                        tags:{$in:user._id}
+                    }
+    ]
+}
 
 
 
@@ -24,12 +48,12 @@ const postSchema= new Schema<IPost>({
         default:true
     },
     likes:[{
-        types:mongoose.Schema.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:'user',
         required:true
     }],
     tags:[{
-        types:mongoose.Schema.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:'user',
         required:true
     }],
