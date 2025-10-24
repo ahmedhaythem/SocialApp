@@ -38,6 +38,7 @@ const validation_middleware_1 = require("../../middleware/validation.middleware"
 const auth_service_1 = require("./auth.service");
 const express_1 = require("express");
 const authValidation = __importStar(require("./auth.validation"));
+const multer_1 = require("../../utils/multer/multer");
 const router = (0, express_1.Router)();
 const authServices = new auth_service_1.AuthServices();
 router.post('/signup', (0, validation_middleware_1.validation)(authValidation.signupSchema), authServices.signUp);
@@ -48,4 +49,5 @@ router.get("/me", (0, auth_middleware_1.auth)(), authServices.getUser);
 router.post("/refresh-token", authServices.refreshToken);
 router.patch("/forget-password", (0, validation_middleware_1.validation)(authValidation.forgetPasswordSchema), authServices.forgetPassword);
 router.patch("/reset-password", authServices.resetPassword);
+router.patch('/profile-image', (0, auth_middleware_1.auth)(), (0, multer_1.uploadFile)({}).single("image"), authServices.profileImage);
 exports.default = router;

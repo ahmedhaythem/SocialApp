@@ -97,4 +97,75 @@ export class PostServices implements IPostService{
 
         return successHandler({res, data:post})
     }
+
+    updatePost= async (req:Request, res:Response)=>{
+        const postId=req.params.id as string
+        const userId=res.locals.user._id
+        const {
+            content,
+            availability,
+            allowComments,
+            removedAttachments,
+            newTags,
+            removedTags
+        }:{
+            content?:string,
+            availability:PostAvailabilityEnum,
+            allowComments:boolean,
+            removedAttachments:Array<string>,
+            newTags:Types.ObjectId[]
+            removedTags:Types.ObjectId[]
+        }=req.body
+        let attachments:string[]=[]
+        const newAttachmnets=(req.files as Array<Express.Multer.File>)
+
+        const post =await this.postModel.findOne({filter:{
+            _id:postId,
+            createdBy:userId
+        }})
+        if(!post){
+            throw new NotFoundException('Post not found')
+        }
+        const users =await this.userModel.find({
+                filter:{
+                    _id:{
+                        $in: newTags
+                    }
+                }
+            })
+            console.log({users:users});
+            
+            if(newTags.length !== req.body.tags?.length){
+                throw new Error('There are some tags not found')
+            }
+        
+            if(newAttachmnets.length){
+                // attachments=await uploadMulifiles({
+                //     files:newAttachmnets
+                // })
+            }
+
+            await post.updateOne({
+                content:content || post.content,
+                availability:availability ||post.availability,
+                allowComments:allowComments ||post.allowComments,
+                $addToSet:{
+                    attachments:{ $each:attachments },
+                    tags:{$each:newTags}
+                },
+                $pull:{
+                    attachments:{ $each:removedAttachments },
+                    tags:{$each:removedTags}
+                }
+            })
+
+
+
+
+
+
+
+
+        return successHandler({res})
+    }
 }

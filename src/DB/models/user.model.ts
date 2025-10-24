@@ -2,6 +2,7 @@ import { HydratedDocument, model, Schema, Types, UpdateQuery } from "mongoose"
 import bcrypt from "bcrypt";
 import tr from "zod/v4/locales/tr.cjs";
 import { createHash } from "crypto";
+import { string } from "zod";
 
 type OtpType={
     otp:string,
@@ -19,6 +20,7 @@ export interface IUser{
     failedOtpAttempts: number,
     otpBanUntil: Date | null,
     isCredentialsUpdated:Date,
+    profileImage:string,
     deleteAt:Date,
     friends:[
         Types.ObjectId
@@ -57,6 +59,7 @@ const userSchema=new Schema<IUser>({
     failedOtpAttempts: { type: Number, default: 0 },
     otpBanUntil: { type: Date , default: null },
     isCredentialsUpdated: Date,
+    profileImage:String,
     deleteAt:Date,
     friends:[{
         type:Types.ObjectId,

@@ -12,6 +12,8 @@ import { createJwt } from '../../utils/jwt';
 import { nanoid } from 'nanoid';
 import { decodeToken, IRequest, TokenTypesEnum } from '../../middleware/auth.middleware';
 import { createHash } from 'crypto';
+import {  uploadSingleFile } from '../../utils/multer/s3.services';
+import { HydratedDocument } from 'mongoose';
 interface IAuthServices{
     signUp(req:Request,res:Response,next:NextFunction): Promise<Response>,
     login(req:Request,res:Response,next:NextFunction): Promise<Response>,
@@ -271,5 +273,19 @@ export class AuthServices implements IAuthServices{
         })
         return successHandler({res})
     }
+
+
+
+    profileImage= async(req:Request,res:Response)=>{
+        const user=res.locals.user as HydratedDocument<IUser>
+        const path=await uploadSingleFile({
+            file:req.file as Express.Multer.File
+        })
+        user.profileImage=path
+        await user.save()
+        successHandler({res,data:path})
+    }
+
+
 
 }

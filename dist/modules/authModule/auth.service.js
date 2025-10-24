@@ -43,6 +43,7 @@ const successHandler_1 = require("../../utils/successHandler");
 const jwt_1 = require("../../utils/jwt");
 const nanoid_1 = require("nanoid");
 const auth_middleware_1 = require("../../middleware/auth.middleware");
+const s3_services_1 = require("../../utils/multer/s3.services");
 class AuthServices {
     userModel = new auth_repo_1.UserRepo();
     constructor() { }
@@ -217,6 +218,15 @@ class AuthServices {
             }
         });
         return (0, successHandler_1.successHandler)({ res });
+    };
+    profileImage = async (req, res) => {
+        const user = res.locals.user;
+        const path = await (0, s3_services_1.uploadSingleFile)({
+            file: req.file
+        });
+        user.profileImage = path;
+        await user.save();
+        (0, successHandler_1.successHandler)({ res, data: path });
     };
 }
 exports.AuthServices = AuthServices;

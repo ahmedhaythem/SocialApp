@@ -1,4 +1,5 @@
 import z from "zod"
+import { extend } from "zod/v4/core/util.cjs"
 
 export interface IError extends Error{
     statusCode:number
@@ -61,5 +62,12 @@ export class NotConfirmedException extends ApplicationException{
         super(msg,401)
         console.log(this.stack);
         
+    }
+}
+
+
+export class FileUploadException extends ApplicationException{
+    constructor(msg='upload file failed'){
+        super(msg,400)
     }
 }

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.NotConfirmedException = exports.InvalidOTPException = exports.InvalidTokenException = exports.NotFoundException = exports.NotValidEmail = exports.ValidationError = exports.ApplicationException = void 0;
+exports.FileUploadException = exports.NotConfirmedException = exports.InvalidOTPException = exports.InvalidTokenException = exports.NotFoundException = exports.NotValidEmail = exports.ValidationError = exports.ApplicationException = void 0;
 class ApplicationException extends Error {
     statusCode;
     constructor(msg, statusCode, options) {
@@ -51,3 +51,9 @@ class NotConfirmedException extends ApplicationException {
     }
 }
 exports.NotConfirmedException = NotConfirmedException;
+class FileUploadException extends ApplicationException {
+    constructor(msg = 'upload file failed') {
+        super(msg, 400);
+    }
+}
+exports.FileUploadException = FileUploadException;

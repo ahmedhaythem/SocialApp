@@ -67,5 +67,49 @@ class PostServices {
         await post.save();
         return (0, successHandler_1.successHandler)({ res, data: post });
     };
+    updatePost = async (req, res) => {
+        const postId = req.params.id;
+        const userId = res.locals.user._id;
+        const { content, availability, allowComments, removedAttachments, newTags, removedTags } = req.body;
+        let attachments = [];
+        const newAttachmnets = req.files;
+        const post = await this.postModel.findOne({ filter: {
+                _id: postId,
+                createdBy: userId
+            } });
+        if (!post) {
+            throw new Error_1.NotFoundException('Post not found');
+        }
+        const users = await this.userModel.find({
+            filter: {
+                _id: {
+                    $in: newTags
+                }
+            }
+        });
+        console.log({ users: users });
+        if (newTags.length !== req.body.tags?.length) {
+            throw new Error('There are some tags not found');
+        }
+        if (newAttachmnets.length) {
+            // attachments=await uploadMulifiles({
+            //     files:newAttachmnets
+            // })
+        }
+        await post.updateOne({
+            content: content || post.content,
+            availability: availability || post.availability,
+            allowComments: allowComments || post.allowComments,
+            $addToSet: {
+                attachments: { $each: attachments },
+                tags: { $each: newTags }
+            },
+            $pull: {
+                attachments: { $each: removedAttachments },
+                tags: { $each: removedTags }
+            }
+        });
+        return (0, successHandler_1.successHandler)({ res });
+    };
 }
 exports.PostServices = PostServices;
