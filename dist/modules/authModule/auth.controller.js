@@ -51,4 +51,6 @@ router.patch("/forget-password", (0, validation_middleware_1.validation)(authVal
 router.patch("/reset-password", authServices.resetPassword);
 router.patch('/profile-image', (0, auth_middleware_1.auth)(), (0, multer_1.uploadFile)({}).single("image"), authServices.profileImage);
 router.patch('/cover-images', (0, auth_middleware_1.auth)(), (0, multer_1.uploadFile)({}).array('cover-images', 5), authServices.coverImages);
+router.post('/send-friend-request', (0, auth_middleware_1.auth)(), authServices.sendFriendReq);
+router.patch("/accept-friend-request/:id", (0, auth_middleware_1.auth)(), authServices.acceptFriendRequest);
 exports.default = router;

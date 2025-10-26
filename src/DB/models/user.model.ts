@@ -1,5 +1,6 @@
-import {  model, Schema, Types } from "mongoose"
+import {  HydratedDocument, model, Schema, Types, UpdateQuery } from "mongoose"
 import bcrypt from "bcrypt";
+import { createHash } from "crypto";
 
 type OtpType={
     otp:string,
@@ -20,10 +21,7 @@ export interface IUser{
     profileImage:string,
     coverImage:string[],
     deleteAt:Date,
-    friends:[
-        type:Types.ObjectId,
-        ref:"user"
-    ]
+    friends:[Types.ObjectId]
 }
 
 const userSchema=new Schema<IUser>({
@@ -101,18 +99,18 @@ userSchema.pre(['findOne','find'],function(next){
     
 })
 
-// userSchema.pre('updateOne',function(next){
-//     const update=this.getUpdate() as UpdateQuery<HydratedDocument<IUser>>
-//     console.log({update});
-//     if(update.deleteAt){
-//         this.setUpdate({...update, isCredentialsUpdated:new Date()})
-//     }
+userSchema.pre('updateOne',function(next){
+    const update=this.getUpdate() as UpdateQuery<HydratedDocument<IUser>>
+    console.log({update});
+    if(update.deleteAt){
+        this.setUpdate({...update, isCredentialsUpdated:new Date()})
+    }
 
-//     if(update.password){
-//         const hashedpassword=createHash(update.password as string)
-//         this.setUpdate({...update, password:hashedpassword, isCredentialsUpdated:new Date()})
-//     }
-//     next()
-// })
+    if(update.password){
+        const hashedpassword=createHash(update.password as string)
+        this.setUpdate({...update, password:hashedpassword, isCredentialsUpdated:new Date()})
+    }
+    next()
+})
 
 export const UserModel=model<IUser>("user",userSchema)

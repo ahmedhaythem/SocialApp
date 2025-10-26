@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PostServices = void 0;
+const mongoose_1 = require("mongoose");
 const successHandler_1 = require("../../utils/successHandler");
 const auth_repo_1 = require("../authModule/auth.repo");
 const post_repo_1 = require("./post.repo");
@@ -94,7 +95,6 @@ class PostServices {
                 }
             }
         });
-        console.log({ users: users });
         if (newTags.length !== req.body.tags?.length) {
             throw new Error('There are some tags not found');
         }
@@ -104,31 +104,64 @@ class PostServices {
                 path: `$users/${userId}/posts/${post.assestsFolderId}`
             });
         }
-        post.attachments?.push(...(attachmentsLink || []));
-        let attachments = post.attachments;
-        if (removedAttachments?.length) {
-            attachments = post.attachments?.filter((link) => {
-                if (!removedAttachments.includes(link)) {
-                    return link;
-                }
-            });
-        }
-        post.tags.push(...(newTags || []));
-        let tags = post.tags;
-        if (removedTags?.length) {
-            tags = post.tags?.filter((tag) => {
-                if (!removedTags.includes(tag)) {
-                    return tag;
-                }
-            });
-        }
-        await post.updateOne({
-            content: content || post.content,
-            availability: availability || post.availability,
-            allowComments: allowComments || post.allowComments,
-            attachments,
-            tags
-        });
+        // post.attachments?.push(...(attachmentsLink || []))
+        // let attachments=post.attachments
+        // if(removedAttachments?.length){
+        //     attachments= post.attachments?.filter((link)=>{
+        //         if(!removedAttachments.includes(link)){
+        //             return link
+        //         }
+        // })
+        // }
+        // post.tags.push(...(newTags ||[]))
+        // let tags=post.tags
+        // if(removedTags?.length){
+        //     tags=post.tags?.filter((tag)=>{
+        //                 if(!removedTags.includes(tag)){
+        //                         return tag
+        //             }
+        //     })
+        // }
+        // await post.updateOne({
+        //     content:content || post.content,
+        //     availability:availability ||post.availability,
+        //     allowComments:allowComments ||post.allowComments,
+        //     attachments,
+        //     tags
+        // })
+        await post.updateOne([
+            {
+                $set: {
+                    content: content || post.content,
+                    availability: availability || post.availability,
+                    allowComments: allowComments || post.allowComments,
+                    attachments: {
+                        $setUnion: [
+                            {
+                                $setDifference: [
+                                    "$attachments",
+                                    removedAttachments
+                                ]
+                            },
+                            attachmentsLink
+                        ]
+                    },
+                    tags: {
+                        $setUnion: [
+                            {
+                                $setDifference: [
+                                    "$tags",
+                                    removedTags
+                                ]
+                            },
+                            newTags.map((tag) => {
+                                return mongoose_1.Types.ObjectId.createFromHexString(tag);
+                            })
+                        ]
+                    }
+                },
+            }
+        ]);
         return (0, successHandler_1.successHandler)({ res });
     };
 }

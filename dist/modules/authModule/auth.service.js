@@ -44,8 +44,10 @@ const jwt_1 = require("../../utils/jwt");
 const nanoid_1 = require("nanoid");
 const auth_middleware_1 = require("../../middleware/auth.middleware");
 const s3_services_1 = require("../../utils/multer/s3.services");
+const friendRequest_repo_1 = require("../../DB/repos/friendRequest.repo");
 class AuthServices {
     userModel = new auth_repo_1.UserRepo();
+    friendRequestModel = new friendRequest_repo_1.friendRequestRepo();
     constructor() { }
     signUp = async (req, res, next) => {
         const { name, email, password, phone } = req.body;
@@ -238,6 +240,74 @@ class AuthServices {
         user.coverImage = paths;
         await user.save();
         (0, successHandler_1.successHandler)({ res, data: paths });
+    };
+    sendFriendReq = async (req, res) => {
+        const authUser = res.locals.user;
+        const { to } = req.body;
+        if (authUser._id.toString() == to) {
+            throw new Error_1.ApplicationException("you can't send friend request to yourself ", 400);
+        }
+        const frined = await this.userModel.findById({
+            id: to
+        });
+        if (!frined) {
+            throw new Error_1.NotFoundException('user not found');
+        }
+        const isFriendRequestExist = await this.friendRequestModel.findOne({
+            filter: {
+                $or: [
+                    { to: authUser._id, from: to },
+                    { to: to, from: authUser._id }
+                ]
+            }
+        });
+        if (isFriendRequestExist) {
+            throw new Error_1.ApplicationException("already friends", 400);
+        }
+        const request = await this.friendRequestModel.create({
+            data: {
+                from: authUser._id,
+                to
+            }
+        });
+        if (!request) {
+            throw new Error_1.ApplicationException("failed to send friend request", 500);
+        }
+        return (0, successHandler_1.successHandler)({ res, data: request });
+    };
+    acceptFriendRequest = async (req, res) => {
+        const user = res.locals.user;
+        const friendRequestId = req.params.id;
+        const request = await this.friendRequestModel.findOne({
+            filter: {
+                to: user._id,
+                _id: friendRequestId,
+                accpetedAt: {
+                    $exists: false
+                }
+            }
+        });
+        if (!request) {
+            throw new Error_1.NotConfirmedException('realation not found');
+        }
+        await user.updateOne({
+            $addToSet: {
+                friends: request.from
+            }
+        });
+        await this.userModel.updateOne({
+            filter: {
+                _id: request.from
+            },
+            update: {
+                $push: {
+                    friends: request.to
+                }
+            }
+        });
+        request.accpetedAt = new Date(Date.now());
+        await request.save();
+        return (0, successHandler_1.successHandler)({ res });
     };
 }
 exports.AuthServices = AuthServices;

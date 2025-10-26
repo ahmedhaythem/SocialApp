@@ -14,4 +14,9 @@ export class UserRepo extends DBRepo<IUser>{
         const user=await this.model.findOne({email},projection,options)
         return user
     }
+
+    updateOne=async({ filter,update,} : {filter: object, update: object})=>{
+        const user=await this.model.updateOne(filter,update)
+        return user
+    }
 }

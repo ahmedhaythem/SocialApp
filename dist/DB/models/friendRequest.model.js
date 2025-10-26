@@ -32,28 +32,22 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.postRoutes = void 0;
-const post_service_1 = require("./post.service");
-const express_1 = require("express");
-const postValidation = __importStar(require("./post.validation"));
-const validation_middleware_1 = require("../../middleware/validation.middleware");
-const multer_1 = __importDefault(require("multer"));
-const auth_middleware_1 = require("../../middleware/auth.middleware");
-const multer_2 = require("../../utils/multer/multer");
-const upload = (0, multer_1.default)();
-const router = (0, express_1.Router)();
-exports.postRoutes = {
-    base: "/posts",
-    createPost: "/",
-    likePost: '/like-unlike',
-    updatedPost: "/update-post/:id"
-};
-const postservices = new post_service_1.PostServices();
-router.post(exports.postRoutes.createPost, (0, auth_middleware_1.auth)(), upload.array("attachments"), (0, validation_middleware_1.validation)(postValidation.createPostSchema), postservices.createPost);
-router.patch(exports.postRoutes.likePost, (0, auth_middleware_1.auth)(), postservices.likePost);
-router.patch(exports.postRoutes.updatedPost, (0, auth_middleware_1.auth)(), (0, multer_2.uploadFile)({}).array('newAttachments', 4), postservices.updatePost);
-exports.default = router;
+exports.FreindRequestModel = void 0;
+const mongoose_1 = __importStar(require("mongoose"));
+const friendRequestSchema = new mongoose_1.Schema({
+    from: {
+        type: mongoose_1.default.Schema.Types.ObjectId,
+        ref: "user",
+        required: true
+    },
+    to: {
+        type: mongoose_1.default.Schema.Types.ObjectId,
+        ref: 'user',
+        required: true
+    },
+    accpetedAt: Date
+}, {
+    timestamps: true
+});
+exports.FreindRequestModel = (0, mongoose_1.model)('friendRequest', friendRequestSchema);

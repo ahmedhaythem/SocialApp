@@ -1,5 +1,3 @@
-import { email } from 'zod';
-import { forgetPasswordSchema } from './auth.validation';
 import { IUser, UserModel } from './../../DB/models/user.model';
 import { NextFunction,Request,Response } from "express";
 import { ApplicationException, InvalidOTPException, NotConfirmedException, NotFoundException, NotValidEmail, ValidationError } from "../../utils/Error";
@@ -14,6 +12,8 @@ import { decodeToken, IRequest, TokenTypesEnum } from '../../middleware/auth.mid
 import { createHash } from 'crypto';
 import {  uploadMultiFiles, uploadSingleFile } from '../../utils/multer/s3.services';
 import { HydratedDocument } from 'mongoose';
+import { friendRequestRepo } from '../../DB/repos/friendRequest.repo';
+
 interface IAuthServices{
     signUp(req:Request,res:Response,next:NextFunction): Promise<Response>,
     login(req:Request,res:Response,next:NextFunction): Promise<Response>,
@@ -25,7 +25,7 @@ interface IAuthServices{
 
 export class AuthServices implements IAuthServices{
     private userModel=new UserRepo()
-
+    private friendRequestModel = new friendRequestRepo()
     constructor(){}
     signUp=async (req:Request,res:Response,next:NextFunction): Promise<Response>=>{
         const {name,email,password,phone}=req.body
@@ -296,6 +296,89 @@ export class AuthServices implements IAuthServices{
         user.coverImage=paths
         await user.save()
         successHandler({res,data:paths})
+    }
+
+
+    sendFriendReq=async(req:Request,res:Response):Promise<Response>=>{
+        const authUser:HydratedDocument<IUser>=res.locals.user
+        const {to}=req.body
+        if(authUser._id.toString()==to){
+            throw new ApplicationException("you can't send friend request to yourself ",400)
+        }
+
+        const frined=await this.userModel.findById({
+            id:to
+        })
+
+        if(!frined){
+            throw new NotFoundException('user not found')
+        }
+
+        const isFriendRequestExist= await this.friendRequestModel.findOne({
+            filter:{
+                    $or:[
+                    {to:authUser._id,from:to},
+                    {to:to,from:authUser._id}
+                ]
+            }
+        })
+
+        if(isFriendRequestExist){
+            throw new ApplicationException("already friends",400)
+        }
+
+        const request= await this.friendRequestModel.create({
+            data:{
+                from:authUser._id,
+                to
+            }
+        })
+        if(!request){
+            throw new ApplicationException("failed to send friend request",500)
+        }
+
+        return successHandler({res,data:request})
+    }
+
+
+    acceptFriendRequest= async (req:Request, res: Response):Promise<Response>=>{
+        const user:HydratedDocument<IUser>=res.locals.user
+        const friendRequestId=req.params.id
+
+        const request =await this.friendRequestModel.findOne({
+            filter:{
+                to:user._id,
+                _id:friendRequestId,
+                accpetedAt:{
+                    $exists:false
+                }
+            }
+        })
+        if(!request){
+            throw new NotConfirmedException('realation not found')
+        }
+        await user.updateOne({
+            $addToSet:{
+                friends:request.from
+            }
+        })
+
+        await this.userModel.updateOne({
+            filter:{
+                _id:request.from
+            },
+            update:{
+                $push:{
+                    friends:request.to
+                }
+            }
+        })
+
+        request.accpetedAt=new Date(Date.now())
+        await request.save()
+
+
+        return successHandler({res})
     }
 
 }

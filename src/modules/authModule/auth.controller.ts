@@ -19,4 +19,6 @@ router.patch("/forget-password",validation(authValidation.forgetPasswordSchema),
 router.patch("/reset-password",authServices.resetPassword)
 router.patch('/profile-image',auth(),uploadFile({}).single("image"),authServices.profileImage)
 router.patch('/cover-images',auth(),uploadFile({}).array('cover-images',5),authServices.coverImages)
+router.post('/send-friend-request',auth(),authServices.sendFriendReq)
+router.patch("/accept-friend-request/:id",auth(),authServices.acceptFriendRequest)
 export default router 

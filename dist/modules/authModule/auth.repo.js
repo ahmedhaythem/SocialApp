@@ -13,5 +13,9 @@ class UserRepo extends DBRepo_1.DBRepo {
         const user = await this.model.findOne({ email }, projection, options);
         return user;
     };
+    updateOne = async ({ filter, update, }) => {
+        const user = await this.model.updateOne(filter, update);
+        return user;
+    };
 }
 exports.UserRepo = UserRepo;
