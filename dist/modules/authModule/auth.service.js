@@ -222,11 +222,22 @@ class AuthServices {
     profileImage = async (req, res) => {
         const user = res.locals.user;
         const path = await (0, s3_services_1.uploadSingleFile)({
-            file: req.file
+            file: req.file,
+            path: "profileImages"
         });
         user.profileImage = path;
         await user.save();
         (0, successHandler_1.successHandler)({ res, data: path });
+    };
+    coverImages = async (req, res) => {
+        const user = res.locals.user;
+        const paths = await (0, s3_services_1.uploadMultiFiles)({
+            files: req.files,
+            path: "coverImages"
+        });
+        user.coverImage = paths;
+        await user.save();
+        (0, successHandler_1.successHandler)({ res, data: paths });
     };
 }
 exports.AuthServices = AuthServices;

@@ -9,7 +9,7 @@ export enum PostAvailabilityEnum{
 
 export interface IPost{
     content?:string
-    attachment?:string
+    attachments?:string[]
     createdBy:Types.ObjectId
     availability:PostAvailabilityEnum
     allowComments:Boolean

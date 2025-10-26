@@ -6,12 +6,15 @@ const auth_repo_1 = require("../authModule/auth.repo");
 const post_repo_1 = require("./post.repo");
 const post_model_1 = require("../../DB/models/post.model");
 const Error_1 = require("../../utils/Error");
+const s3_services_1 = require("../../utils/multer/s3.services");
+const nanoid_1 = require("nanoid");
 class PostServices {
     postModel = new post_repo_1.PostRepo();
     userModel = new auth_repo_1.UserRepo();
     createPost = async (req, res) => {
-        // const {allowComments, availability, content, tags}:createPostDTO=req.body
-        const files = req.files || [];
+        const files = req.files;
+        const assestsFolderId = (0, nanoid_1.nanoid)(15);
+        const path = `$users/${res.locals.user._id}/posts/${assestsFolderId}`;
         if (req.body.tags?.length) {
             const users = await this.userModel.find({
                 filter: {
@@ -25,15 +28,19 @@ class PostServices {
                 throw new Error('there are some users not found');
             }
         }
-        // let attachments=[]
-        // if(files?.length){
-        // }
+        let attachments = [];
+        if (files?.length) {
+            attachments = await (0, s3_services_1.uploadMultiFiles)({
+                files,
+                path
+            });
+        }
         const post = await this.postModel.create({
             data: {
                 ...req.body,
-                // attachments,
+                attachments,
                 createdBy: res.locals.user._id,
-                // assestsFolderId
+                assestsFolderId
             }
         });
         return (0, successHandler_1.successHandler)({ res, data: post });
@@ -71,7 +78,7 @@ class PostServices {
         const postId = req.params.id;
         const userId = res.locals.user._id;
         const { content, availability, allowComments, removedAttachments, newTags, removedTags } = req.body;
-        let attachments = [];
+        let attachmentsLink = [];
         const newAttachmnets = req.files;
         const post = await this.postModel.findOne({ filter: {
                 _id: postId,
@@ -92,22 +99,35 @@ class PostServices {
             throw new Error('There are some tags not found');
         }
         if (newAttachmnets.length) {
-            // attachments=await uploadMulifiles({
-            //     files:newAttachmnets
-            // })
+            attachmentsLink = await (0, s3_services_1.uploadMultiFiles)({
+                files: newAttachmnets,
+                path: `$users/${userId}/posts/${post.assestsFolderId}`
+            });
+        }
+        post.attachments?.push(...(attachmentsLink || []));
+        let attachments = post.attachments;
+        if (removedAttachments?.length) {
+            attachments = post.attachments?.filter((link) => {
+                if (!removedAttachments.includes(link)) {
+                    return link;
+                }
+            });
+        }
+        post.tags.push(...(newTags || []));
+        let tags = post.tags;
+        if (removedTags?.length) {
+            tags = post.tags?.filter((tag) => {
+                if (!removedTags.includes(tag)) {
+                    return tag;
+                }
+            });
         }
         await post.updateOne({
             content: content || post.content,
             availability: availability || post.availability,
             allowComments: allowComments || post.allowComments,
-            $addToSet: {
-                attachments: { $each: attachments },
-                tags: { $each: newTags }
-            },
-            $pull: {
-                attachments: { $each: removedAttachments },
-                tags: { $each: removedTags }
-            }
+            attachments,
+            tags
         });
         return (0, successHandler_1.successHandler)({ res });
     };

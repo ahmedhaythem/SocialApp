@@ -50,4 +50,5 @@ router.post("/refresh-token", authServices.refreshToken);
 router.patch("/forget-password", (0, validation_middleware_1.validation)(authValidation.forgetPasswordSchema), authServices.forgetPassword);
 router.patch("/reset-password", authServices.resetPassword);
 router.patch('/profile-image', (0, auth_middleware_1.auth)(), (0, multer_1.uploadFile)({}).single("image"), authServices.profileImage);
+router.patch('/cover-images', (0, auth_middleware_1.auth)(), (0, multer_1.uploadFile)({}).array('cover-images', 5), authServices.coverImages);
 exports.default = router;

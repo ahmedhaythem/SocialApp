@@ -38,6 +38,9 @@ const userSchema = new mongoose_1.Schema({
     otpBanUntil: { type: Date, default: null },
     isCredentialsUpdated: Date,
     profileImage: String,
+    coverImage: [{
+            type: String
+        }],
     deleteAt: Date,
     friends: [{
             type: mongoose_1.Types.ObjectId,

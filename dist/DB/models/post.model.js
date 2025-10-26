@@ -60,7 +60,7 @@ const availabilityConditon = (user) => {
 exports.availabilityConditon = availabilityConditon;
 const postSchema = new mongoose_1.Schema({
     content: { type: String },
-    attachment: [{
+    attachments: [{
             type: String
         }],
     createdBy: {

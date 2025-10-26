@@ -18,4 +18,5 @@ router.post("/refresh-token",authServices.refreshToken)
 router.patch("/forget-password",validation(authValidation.forgetPasswordSchema),authServices.forgetPassword)
 router.patch("/reset-password",authServices.resetPassword)
 router.patch('/profile-image',auth(),uploadFile({}).single("image"),authServices.profileImage)
+router.patch('/cover-images',auth(),uploadFile({}).array('cover-images',5),authServices.coverImages)
 export default router 

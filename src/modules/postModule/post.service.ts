@@ -9,6 +9,8 @@ import { UserRepo } from '../authModule/auth.repo';
 import { PostRepo } from './post.repo';
 import { availabilityConditon } from '../../DB/models/post.model';
 import { NotFoundException } from '../../utils/Error';
+import { uploadMultiFiles } from '../../utils/multer/s3.services';
+import { nanoid } from 'nanoid';
 
 
 
@@ -26,8 +28,9 @@ export class PostServices implements IPostService{
     private userModel= new UserRepo()
     createPost= async (req: Request, res: Response): Promise<Response>=> {
         
-        // const {allowComments, availability, content, tags}:createPostDTO=req.body
-        const files=req.files || []
+        const files:Express.Multer.File[]=req.files as Express.Multer.File[]
+        const assestsFolderId = nanoid(15)
+        const path= `$users/${res.locals.user._id}/posts/${assestsFolderId}`
         if(req.body.tags?.length){
             const users =await this.userModel.find({
                 filter:{
@@ -43,17 +46,20 @@ export class PostServices implements IPostService{
             }
         }
 
-        // let attachments=[]
-        // if(files?.length){
-
-        // }
+        let attachments:string[]=[]
+        if(files?.length){
+            attachments=await uploadMultiFiles({
+                files,
+                path
+            })
+        }
 
         const post =await this.postModel.create({
             data:{
                 ...req.body,
-                // attachments,
+                attachments,
                 createdBy:res.locals.user._id,
-                // assestsFolderId
+                assestsFolderId
 
 
         }})
@@ -113,10 +119,10 @@ export class PostServices implements IPostService{
             availability:PostAvailabilityEnum,
             allowComments:boolean,
             removedAttachments:Array<string>,
-            newTags:Types.ObjectId[]
+            newTags:string[]
             removedTags:Types.ObjectId[]
         }=req.body
-        let attachments:string[]=[]
+        let attachmentsLink:string[]=[]
         const newAttachmnets=(req.files as Array<Express.Multer.File>)
 
         const post =await this.postModel.findOne({filter:{
@@ -133,36 +139,84 @@ export class PostServices implements IPostService{
                     }
                 }
             })
-            console.log({users:users});
+            
             
             if(newTags.length !== req.body.tags?.length){
                 throw new Error('There are some tags not found')
             }
         
             if(newAttachmnets.length){
-                // attachments=await uploadMulifiles({
-                //     files:newAttachmnets
-                // })
+                attachmentsLink=await uploadMultiFiles({
+                    files:newAttachmnets,
+                    path:`$users/${userId}/posts/${post.assestsFolderId}`
+                })
             }
 
-            await post.updateOne({
-                content:content || post.content,
-                availability:availability ||post.availability,
-                allowComments:allowComments ||post.allowComments,
-                $addToSet:{
-                    attachments:{ $each:attachments },
-                    tags:{$each:newTags}
-                },
-                $pull:{
-                    attachments:{ $each:removedAttachments },
-                    tags:{$each:removedTags}
+            // post.attachments?.push(...(attachmentsLink || []))
+
+            // let attachments=post.attachments
+
+            // if(removedAttachments?.length){
+            //     attachments= post.attachments?.filter((link)=>{
+            //         if(!removedAttachments.includes(link)){
+            //             return link
+            //         }
+            // })
+            // }
+            // post.tags.push(...(newTags ||[]))
+            // let tags=post.tags
+            // if(removedTags?.length){
+            //     tags=post.tags?.filter((tag)=>{
+            //                 if(!removedTags.includes(tag)){
+            //                         return tag
+            //             }
+            //     })
+            // }
+
+            // await post.updateOne({
+            //     content:content || post.content,
+            //     availability:availability ||post.availability,
+            //     allowComments:allowComments ||post.allowComments,
+            //     attachments,
+            //     tags
+            // })
+
+            
+
+            await post.updateOne([
+                {
+                    $set:{
+                        content:content || post.content,
+                        availability:availability ||post.availability,
+                        allowComments:allowComments ||post.allowComments,
+                        attachments:{
+                            $setUnion:[
+                                {
+                                    $setDifference:[
+                                        "$attachments",
+                                        removedAttachments
+                                    ]
+                                },
+                                attachmentsLink
+                            ]
+                        },
+                        tags:{
+                            $setUnion:[
+                                {
+                                    $setDifference:[
+                                        "$tags",
+                                        removedTags
+                                    ]
+                                },
+                                newTags.map((tag:string)=>{
+                                    return Types.ObjectId.createFromHexString(tag)
+                                })
+                            ]
+                        }
+                    },
+
                 }
-            })
-
-
-
-
-
+            ])
 
 
 

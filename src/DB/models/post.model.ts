@@ -30,7 +30,7 @@ export const availabilityConditon=(user:HydratedDocument<IUser>)=>{
 
 const postSchema= new Schema<IPost>({
     content:{type:String},
-    attachment:[{
+    attachments:[{
         type:String
     }],
     createdBy:{
