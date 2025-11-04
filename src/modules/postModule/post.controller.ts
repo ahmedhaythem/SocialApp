@@ -14,7 +14,12 @@ export const postRoutes= {
     base:"/posts",
     createPost:"/",
     likePost:'/like-unlike',
-    updatedPost:"/update-post/:id"
+    updatedPost:"/update-post/:id",
+    freezePost:'/freeze/:postId',
+    unFreezePost:'/unfreeze/:postId',
+    deletePost:'/hard-delete/:postId'
+
+
 }
 
 const postservices=new PostServices()
@@ -39,6 +44,25 @@ router.patch(
     auth(),
     uploadFile({}).array('newAttachments',4),
     postservices.updatePost
+)
+
+router.patch(
+    postRoutes.freezePost,
+    auth(), 
+    postservices.freezePost
+)
+
+
+router.patch(
+    postRoutes.unFreezePost, 
+    auth(), 
+    postservices.unfreezePost
+)
+
+router.delete(
+    postRoutes.deletePost,
+    auth(), 
+    postservices.hardDeletePost
 )
 
 

@@ -9,5 +9,8 @@ class PostRepo extends DBRepo_1.DBRepo {
         super(model);
         this.model = model;
     }
+    async delete({ filter }) {
+        return await this.model.deleteOne(filter);
+    }
 }
 exports.PostRepo = PostRepo;

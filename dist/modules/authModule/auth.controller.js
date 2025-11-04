@@ -46,6 +46,7 @@ router.post('/login', (0, validation_middleware_1.validation)(authValidation.log
 router.patch('/confirm-email', authServices.confirmEmail);
 router.patch("/resend-otp", (0, validation_middleware_1.validation)(authValidation.resendOtp), authServices.resendOtp);
 router.get("/me", (0, auth_middleware_1.auth)(), authServices.getUser);
+router.get("/profile", (0, auth_middleware_1.auth)(), authServices.profile);
 router.post("/refresh-token", authServices.refreshToken);
 router.patch("/forget-password", (0, validation_middleware_1.validation)(authValidation.forgetPasswordSchema), authServices.forgetPassword);
 router.patch("/reset-password", authServices.resetPassword);

@@ -90,7 +90,7 @@ class AuthServices {
             id: user._id,
         }, process.env.ACCESS_SIGNATURE, {
             jwtid: jti,
-            expiresIn: "1H"
+            expiresIn: "2H"
         });
         const refreshToken = (0, jwt_1.createJwt)({
             jwtid: jti,
@@ -308,6 +308,19 @@ class AuthServices {
         request.accpetedAt = new Date(Date.now());
         await request.save();
         return (0, successHandler_1.successHandler)({ res });
+    };
+    profile = async (req, res) => {
+        const userId = res.locals.user._id;
+        const user = await this.userModel.findById({
+            id: userId,
+            options: {
+                populate: "friends"
+            }
+        });
+        if (!user) {
+            throw new Error_1.NotFoundException('user not found');
+        }
+        return (0, successHandler_1.successHandler)({ res, data: { user } });
     };
 }
 exports.AuthServices = AuthServices;

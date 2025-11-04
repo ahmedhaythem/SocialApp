@@ -39,8 +39,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_controller_1 = __importDefault(require("./modules/authModule/auth.controller"));
 const post_controller_1 = __importStar(require("./modules/postModule/post.controller"));
+const modules_1 = require("./modules");
 const baseRouter = (0, express_1.Router)();
 baseRouter.use('/auth', auth_controller_1.default);
 baseRouter.use(post_controller_1.postRoutes.base, post_controller_1.default);
-// baseRouter.use("/posts",postRouter)
+baseRouter.use(modules_1.chatRoutes.base, modules_1.chatRouter);
 exports.default = baseRouter;

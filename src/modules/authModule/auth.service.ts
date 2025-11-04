@@ -84,7 +84,7 @@ export class AuthServices implements IAuthServices{
         process.env.ACCESS_SIGNATURE as string,
         {
             jwtid:jti,
-            expiresIn: "1H"
+            expiresIn: "2H"
         }
     )
 
@@ -381,4 +381,18 @@ export class AuthServices implements IAuthServices{
         return successHandler({res})
     }
 
+
+    profile= async(req:Request,res:Response)=>{
+        const userId=res.locals.user._id
+        const user=await this.userModel.findById({
+            id:userId,
+            options:{
+                populate:"friends"
+            }
+        })
+        if(!user){
+            throw new NotFoundException('user not found')
+        }
+        return successHandler({res, data: {user}})
+    }
 }

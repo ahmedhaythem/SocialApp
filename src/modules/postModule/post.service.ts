@@ -8,8 +8,8 @@ import { createPostDTO } from './post.DTO';
 import { UserRepo } from '../authModule/auth.repo';
 import { PostRepo } from './post.repo';
 import { availabilityConditon } from '../../DB/models/post.model';
-import { NotFoundException } from '../../utils/Error';
-import { uploadMultiFiles } from '../../utils/multer/s3.services';
+import { ApplicationException, NotFoundException } from '../../utils/Error';
+import { s3DeleteFolder, uploadMultiFiles } from '../../utils/multer/s3.services';
 import { nanoid } from 'nanoid';
 
 
@@ -132,18 +132,29 @@ export class PostServices implements IPostService{
         if(!post){
             throw new NotFoundException('Post not found')
         }
-        const users =await this.userModel.find({
-                filter:{
-                    _id:{
-                        $in: newTags
-                    }
-                }
-            })
-            
-            
-            if(newTags.length !== req.body.tags?.length){
-                throw new Error('There are some tags not found')
+
+        const validNewTags = (newTags || []).filter(
+            (tag: string) => tag && Types.ObjectId.isValid(tag)
+        )
+
+        if (validNewTags.length) {
+            const users = await this.userModel.find({
+            filter: {
+                _id: {
+                $in: validNewTags,
+                },
+            },
+            });
+
+            if (users.length !== validNewTags.length) {
+            throw new Error("There are some tags not found");
             }
+        }
+            
+            
+        // if(newTags.length !== req.body.tags?.length){
+        //     throw new Error('There are some tags not found')
+        // }
         
             if(newAttachmnets.length){
                 attachmentsLink=await uploadMultiFiles({
@@ -151,36 +162,6 @@ export class PostServices implements IPostService{
                     path:`$users/${userId}/posts/${post.assestsFolderId}`
                 })
             }
-
-            // post.attachments?.push(...(attachmentsLink || []))
-
-            // let attachments=post.attachments
-
-            // if(removedAttachments?.length){
-            //     attachments= post.attachments?.filter((link)=>{
-            //         if(!removedAttachments.includes(link)){
-            //             return link
-            //         }
-            // })
-            // }
-            // post.tags.push(...(newTags ||[]))
-            // let tags=post.tags
-            // if(removedTags?.length){
-            //     tags=post.tags?.filter((tag)=>{
-            //                 if(!removedTags.includes(tag)){
-            //                         return tag
-            //             }
-            //     })
-            // }
-
-            // await post.updateOne({
-            //     content:content || post.content,
-            //     availability:availability ||post.availability,
-            //     allowComments:allowComments ||post.allowComments,
-            //     attachments,
-            //     tags
-            // })
-
             
 
             await post.updateOne([
@@ -194,7 +175,7 @@ export class PostServices implements IPostService{
                                 {
                                     $setDifference:[
                                         "$attachments",
-                                        removedAttachments
+                                        removedAttachments || []
                                     ]
                                 },
                                 attachmentsLink
@@ -205,12 +186,12 @@ export class PostServices implements IPostService{
                                 {
                                     $setDifference:[
                                         "$tags",
-                                        removedTags
+                                        removedTags || []
                                     ]
                                 },
-                                newTags.map((tag:string)=>{
-                                    return Types.ObjectId.createFromHexString(tag)
-                                })
+                            validNewTags
+                                    .filter((tag: string) => Types.ObjectId.isValid(tag)) // ✅ only valid IDs
+                                    .map((tag: string) => Types.ObjectId.createFromHexString(tag))
                             ]
                         }
                     },
@@ -222,4 +203,109 @@ export class PostServices implements IPostService{
 
         return successHandler({res})
     }
+
+
+
+    freezePost = async (req: Request, res: Response): Promise<Response> => {
+        const { postId } = req.params;
+        const userId = res.locals.user._id;
+
+        const post = await this.postModel.findOne({
+            filter: {
+                _id: postId,
+                createdBy: userId,
+            },
+        });
+
+        if (!post) throw new NotFoundException("Post not found");
+        
+        if (post.createdBy.toString() !== userId.toString()) {
+            throw new ApplicationException("You are not authorized to perform this action", 403);
+        }
+
+        if (post.isFrozen) {
+            throw new Error("Post is already frozen");
+        }
+
+        await post.updateOne({
+            $set: {
+                isFrozen: true,
+                allowComments: false,
+            },
+        });
+
+        return successHandler({ res, data: "Post has been frozen successfully" });
+    };
+
+
+    unfreezePost = async (req: Request, res: Response): Promise<Response> => {
+        const { postId } = req.params;
+        const userId = res.locals.user._id;
+
+        const post = await this.postModel.findOne({
+            filter: {
+                _id: postId,
+                createdBy: userId,
+            },
+        });
+
+        if (!post) throw new NotFoundException("Post not found");
+
+        if (post.createdBy.toString() !== userId.toString()) {
+            throw new ApplicationException("You are not authorized to perform this action", 403);
+        }
+
+        if (!post.isFrozen) {
+            throw new Error("Post is not frozen");
+        }
+
+        await post.updateOne({
+            $set: {
+                isFrozen: false,
+                allowComments: true,
+            },
+        });
+
+        return successHandler({ res, data: "Post has been unfrozen successfully" });
+    };
+
+
+
+    hardDeletePost = async (req: Request, res: Response): Promise<Response> => {
+        const { postId } = req.params;
+        const userId = res.locals.user._id;
+
+        const post = await this.postModel.findOne({
+            filter: {
+                _id: postId,
+                createdBy: userId,
+            },
+        });
+
+        if (!post) throw new NotFoundException("Post not found");
+
+        if (post.createdBy.toString() !== userId.toString()) {
+            throw new ApplicationException("You are not authorized to perform this action", 403);
+        }
+
+        if (post.assestsFolderId) {
+            try {
+                await s3DeleteFolder(`users/${userId}/posts/${post.assestsFolderId}`);
+            } catch (err) {
+                console.warn("Failed to delete S3 folder:", err);
+            }
+        }
+
+        await this.postModel.delete({
+            filter: { _id: postId },
+        });
+
+        return successHandler({ res, data: "Post deleted" });
+    };
+
+
+    
+
+
+
 }

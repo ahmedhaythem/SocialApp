@@ -15,4 +15,9 @@ export class PostRepo extends DBRepo<IPost>{
         super(model)
     }
 
+
+    async delete({ filter }: { filter: any }) {
+        return await this.model.deleteOne(filter);
+    }
+
 }

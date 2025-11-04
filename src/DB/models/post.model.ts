@@ -61,6 +61,10 @@ const postSchema= new Schema<IPost>({
         type:Boolean,
         default:false
     },
+    isFrozen: { 
+        type: Boolean, 
+        default: false 
+    },
     assestsFolderId:{type:String}
 },{
     timestamps:true

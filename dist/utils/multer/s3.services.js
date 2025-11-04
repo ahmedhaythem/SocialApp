@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createPreSignedURL = exports.uploadMultiFiles = exports.uploadSingleLargeFile = exports.uploadSingleFile = void 0;
+exports.s3DeleteFolder = exports.createPreSignedURL = exports.uploadMultiFiles = exports.uploadSingleLargeFile = exports.uploadSingleFile = void 0;
 const fs_1 = require("fs");
 const multer_1 = require("./multer");
 const client_s3_1 = require("@aws-sdk/client-s3");
@@ -89,3 +89,19 @@ const createPreSignedURL = async ({ Bucket = process.env.AWS_BUCKET_NAME, path =
     return { url, Key: command.input.Key };
 };
 exports.createPreSignedURL = createPreSignedURL;
+const s3DeleteFolder = async (folderPath) => {
+    const s3 = new client_s3_1.S3Client({ region: process.env.AWS_REGION });
+    const list = await s3.send(new client_s3_1.ListObjectsV2Command({
+        Bucket: process.env.BUCKET_NAME,
+        Prefix: folderPath,
+    }));
+    if (!list.Contents)
+        return;
+    for (const file of list.Contents) {
+        await s3.send(new client_s3_1.DeleteObjectCommand({
+            Bucket: process.env.BUCKET_NAME,
+            Key: file.Key,
+        }));
+    }
+};
+exports.s3DeleteFolder = s3DeleteFolder;

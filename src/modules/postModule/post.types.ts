@@ -16,6 +16,7 @@ export interface IPost{
     likes:Array<Types.ObjectId>
     tags:Array<Types.ObjectId>
     isDeleted?:Boolean
+    isFrozen?:Boolean
     assestsFolderId:string
     createdAt?:Date
     updatedAt?:Date

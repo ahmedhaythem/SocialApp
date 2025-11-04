@@ -9,15 +9,23 @@ const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const routes_1 = __importDefault(require("./routes"));
 const db_connection_1 = require("./DB/db.connection");
+const cors_1 = __importDefault(require("cors"));
+const gateway_1 = require("./modules/gateway/gateway");
 dotenv_1.default.config({
     path: path_1.default.resolve('./src/config/.env')
 });
 const app = (0, express_1.default)();
+const corsOptions = {
+    origin: ["http://127.0.0.1:5501", "http://localhost:5501"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
+};
+app.use((0, cors_1.default)(corsOptions));
+app.use(express_1.default.json());
 const bootstrap = async () => {
     const port = process.env.PORT;
     await (0, db_connection_1.ConnnectDB)();
     // sendEmail()
-    app.use(express_1.default.json());
     app.use("/api/v1", routes_1.default);
     app.use((err, req, res, next) => {
         return res.status(err.statusCode || 500).json({
@@ -26,29 +34,9 @@ const bootstrap = async () => {
             stack: err.stack
         });
     });
-    // const test=async()=>{
-    //     try {
-    //         const userModel=new UserRepo()
-    //         const user=await userModel.findOne({
-    //             filter:{
-    //                 // _id:"68cd4c998522ac2e69eb4269",
-    //                 _id:"68cd4c998522ac2e69eb4269",
-    //                 paranoId:false
-    //             },
-    //         })
-    //         if(!user){
-    //             throw new Error("User not Found")
-    //         }
-    //         console.log({user});
-    //         // user.deleteAt=new Date(Date.now())
-    //         // await user.save()
-    //     } catch (error) {
-    //         console.log({error});
-    //     }
-    // }
-    // test()
-    app.listen(port, () => {
+    const httpServer = app.listen(port, () => {
         console.log("Server is running on port: " + port);
     });
+    (0, gateway_1.inilialize)(httpServer);
 };
 exports.bootstrap = bootstrap;

@@ -64,10 +64,10 @@ userSchema.pre("save", async function () {
 });
 userSchema.pre(['findOne', 'find'], function (next) {
     const query = this.getQuery();
-    console.log({
-        this: this,
-        query: this.getQuery()
-    });
+    // console.log({
+    //     this:this,
+    //     query:this.getQuery()
+    // });
     if (query.paranoId === false) {
         this.setQuery({ ...query });
     }
@@ -78,7 +78,7 @@ userSchema.pre(['findOne', 'find'], function (next) {
 });
 userSchema.pre('updateOne', function (next) {
     const update = this.getUpdate();
-    console.log({ update });
+    // console.log({update});
     if (update.deleteAt) {
         this.setUpdate({ ...update, isCredentialsUpdated: new Date() });
     }

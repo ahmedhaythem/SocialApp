@@ -91,6 +91,10 @@ const postSchema = new mongoose_1.Schema({
         type: Boolean,
         default: false
     },
+    isFrozen: {
+        type: Boolean,
+        default: false
+    },
     assestsFolderId: { type: String }
 }, {
     timestamps: true

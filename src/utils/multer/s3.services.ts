@@ -1,6 +1,6 @@
 import { createReadStream } from 'fs';
 import { StoreIn } from './multer';
-import { ObjectCannedACL, PutObjectCommand } from "@aws-sdk/client-s3"
+import { DeleteObjectCommand, ListObjectsV2Command, ObjectCannedACL, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
 import { s3Config } from './s3Config';
 import { ApplicationException, FileUploadException } from '../Error';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -146,3 +146,22 @@ export const createPreSignedURL=async({
     }
     return {url,Key:command.input.Key}
 }
+
+
+
+export const s3DeleteFolder = async (folderPath: string) => {
+    const s3 = new S3Client({ region: process.env.AWS_REGION as string});
+    const list = await s3.send(new ListObjectsV2Command({
+        Bucket: process.env.BUCKET_NAME!,
+        Prefix: folderPath,
+    }));
+
+    if (!list.Contents) return;
+
+    for (const file of list.Contents) {
+        await s3.send(new DeleteObjectCommand({
+        Bucket: process.env.BUCKET_NAME!,
+        Key: file.Key!,
+        }));
+    }
+};

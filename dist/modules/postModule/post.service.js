@@ -88,47 +88,28 @@ class PostServices {
         if (!post) {
             throw new Error_1.NotFoundException('Post not found');
         }
-        const users = await this.userModel.find({
-            filter: {
-                _id: {
-                    $in: newTags
-                }
+        const validNewTags = (newTags || []).filter((tag) => tag && mongoose_1.Types.ObjectId.isValid(tag));
+        if (validNewTags.length) {
+            const users = await this.userModel.find({
+                filter: {
+                    _id: {
+                        $in: validNewTags,
+                    },
+                },
+            });
+            if (users.length !== validNewTags.length) {
+                throw new Error("There are some tags not found");
             }
-        });
-        if (newTags.length !== req.body.tags?.length) {
-            throw new Error('There are some tags not found');
         }
+        // if(newTags.length !== req.body.tags?.length){
+        //     throw new Error('There are some tags not found')
+        // }
         if (newAttachmnets.length) {
             attachmentsLink = await (0, s3_services_1.uploadMultiFiles)({
                 files: newAttachmnets,
                 path: `$users/${userId}/posts/${post.assestsFolderId}`
             });
         }
-        // post.attachments?.push(...(attachmentsLink || []))
-        // let attachments=post.attachments
-        // if(removedAttachments?.length){
-        //     attachments= post.attachments?.filter((link)=>{
-        //         if(!removedAttachments.includes(link)){
-        //             return link
-        //         }
-        // })
-        // }
-        // post.tags.push(...(newTags ||[]))
-        // let tags=post.tags
-        // if(removedTags?.length){
-        //     tags=post.tags?.filter((tag)=>{
-        //                 if(!removedTags.includes(tag)){
-        //                         return tag
-        //             }
-        //     })
-        // }
-        // await post.updateOne({
-        //     content:content || post.content,
-        //     availability:availability ||post.availability,
-        //     allowComments:allowComments ||post.allowComments,
-        //     attachments,
-        //     tags
-        // })
         await post.updateOne([
             {
                 $set: {
@@ -140,7 +121,7 @@ class PostServices {
                             {
                                 $setDifference: [
                                     "$attachments",
-                                    removedAttachments
+                                    removedAttachments || []
                                 ]
                             },
                             attachmentsLink
@@ -151,18 +132,95 @@ class PostServices {
                             {
                                 $setDifference: [
                                     "$tags",
-                                    removedTags
+                                    removedTags || []
                                 ]
                             },
-                            newTags.map((tag) => {
-                                return mongoose_1.Types.ObjectId.createFromHexString(tag);
-                            })
+                            validNewTags
+                                .filter((tag) => mongoose_1.Types.ObjectId.isValid(tag)) // ✅ only valid IDs
+                                .map((tag) => mongoose_1.Types.ObjectId.createFromHexString(tag))
                         ]
                     }
                 },
             }
         ]);
         return (0, successHandler_1.successHandler)({ res });
+    };
+    freezePost = async (req, res) => {
+        const { postId } = req.params;
+        const userId = res.locals.user._id;
+        const post = await this.postModel.findOne({
+            filter: {
+                _id: postId,
+                createdBy: userId,
+            },
+        });
+        if (!post)
+            throw new Error_1.NotFoundException("Post not found");
+        if (post.createdBy.toString() !== userId.toString()) {
+            throw new Error_1.ApplicationException("You are not authorized to perform this action", 403);
+        }
+        if (post.isFrozen) {
+            throw new Error("Post is already frozen");
+        }
+        await post.updateOne({
+            $set: {
+                isFrozen: true,
+                allowComments: false,
+            },
+        });
+        return (0, successHandler_1.successHandler)({ res, data: "Post has been frozen successfully" });
+    };
+    unfreezePost = async (req, res) => {
+        const { postId } = req.params;
+        const userId = res.locals.user._id;
+        const post = await this.postModel.findOne({
+            filter: {
+                _id: postId,
+                createdBy: userId,
+            },
+        });
+        if (!post)
+            throw new Error_1.NotFoundException("Post not found");
+        if (post.createdBy.toString() !== userId.toString()) {
+            throw new Error_1.ApplicationException("You are not authorized to perform this action", 403);
+        }
+        if (!post.isFrozen) {
+            throw new Error("Post is not frozen");
+        }
+        await post.updateOne({
+            $set: {
+                isFrozen: false,
+                allowComments: true,
+            },
+        });
+        return (0, successHandler_1.successHandler)({ res, data: "Post has been unfrozen successfully" });
+    };
+    hardDeletePost = async (req, res) => {
+        const { postId } = req.params;
+        const userId = res.locals.user._id;
+        const post = await this.postModel.findOne({
+            filter: {
+                _id: postId,
+                createdBy: userId,
+            },
+        });
+        if (!post)
+            throw new Error_1.NotFoundException("Post not found");
+        if (post.createdBy.toString() !== userId.toString()) {
+            throw new Error_1.ApplicationException("You are not authorized to perform this action", 403);
+        }
+        if (post.assestsFolderId) {
+            try {
+                await (0, s3_services_1.s3DeleteFolder)(`users/${userId}/posts/${post.assestsFolderId}`);
+            }
+            catch (err) {
+                console.warn("Failed to delete S3 folder:", err);
+            }
+        }
+        await this.postModel.delete({
+            filter: { _id: postId },
+        });
+        return (0, successHandler_1.successHandler)({ res, data: "Post deleted" });
     };
 }
 exports.PostServices = PostServices;

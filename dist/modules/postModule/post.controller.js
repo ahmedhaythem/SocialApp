@@ -50,10 +50,16 @@ exports.postRoutes = {
     base: "/posts",
     createPost: "/",
     likePost: '/like-unlike',
-    updatedPost: "/update-post/:id"
+    updatedPost: "/update-post/:id",
+    freezePost: '/freeze/:postId',
+    unFreezePost: '/unfreeze/:postId',
+    deletePost: '/hard-delete/:postId'
 };
 const postservices = new post_service_1.PostServices();
 router.post(exports.postRoutes.createPost, (0, auth_middleware_1.auth)(), upload.array("attachments"), (0, validation_middleware_1.validation)(postValidation.createPostSchema), postservices.createPost);
 router.patch(exports.postRoutes.likePost, (0, auth_middleware_1.auth)(), postservices.likePost);
 router.patch(exports.postRoutes.updatedPost, (0, auth_middleware_1.auth)(), (0, multer_2.uploadFile)({}).array('newAttachments', 4), postservices.updatePost);
+router.patch(exports.postRoutes.freezePost, (0, auth_middleware_1.auth)(), postservices.freezePost);
+router.patch(exports.postRoutes.unFreezePost, (0, auth_middleware_1.auth)(), postservices.unfreezePost);
+router.delete(exports.postRoutes.deletePost, (0, auth_middleware_1.auth)(), postservices.hardDeletePost);
 exports.default = router;

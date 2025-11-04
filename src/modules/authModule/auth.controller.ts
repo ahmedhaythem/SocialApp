@@ -14,6 +14,9 @@ router.post('/login',validation(authValidation.loginSchema),authServices.login)
 router.patch('/confirm-email',authServices.confirmEmail)
 router.patch("/resend-otp",validation(authValidation.resendOtp),authServices.resendOtp)
 router.get("/me",auth(),authServices.getUser)
+
+router.get("/profile",auth(),authServices.profile)
+
 router.post("/refresh-token",authServices.refreshToken)
 router.patch("/forget-password",validation(authValidation.forgetPasswordSchema),authServices.forgetPassword)
 router.patch("/reset-password",authServices.resetPassword)

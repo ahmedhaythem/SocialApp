@@ -6,13 +6,27 @@ import { IError } from "./utils/Error"
 import { ConnnectDB } from "./DB/db.connection"
 import { sendEmail } from "./utils/sendEmail/sendEmail"
 import { UserRepo } from "./modules/authModule/auth.repo"
-
+import {Server, Socket} from "socket.io"
+import { IUser } from "./DB/models/user.model"
+import { decodeToken, TokenTypesEnum } from "./middleware/auth.middleware"
+import { HydratedDocument } from "mongoose"
+import cors,{ CorsOptions } from "cors"
+import { inilialize } from "./modules/gateway/gateway"
 
 dotenv.config({
     path:path.resolve('./src/config/.env')
 })
 const app=express()
 
+
+const corsOptions: CorsOptions = {
+    origin: ["http://127.0.0.1:5501", "http://localhost:5501"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.use(express.json())
 
 export const bootstrap=async ()=>{
     const port=process.env.PORT
@@ -21,7 +35,6 @@ export const bootstrap=async ()=>{
 
     // sendEmail()
 
-    app.use(express.json())
 
     app.use("/api/v1",baseRouter)
 
@@ -34,34 +47,10 @@ export const bootstrap=async ()=>{
         })
     })
 
-    // const test=async()=>{
-    //     try {
-    //         const userModel=new UserRepo()
-    //         const user=await userModel.findOne({
-    //             filter:{
-    //                 // _id:"68cd4c998522ac2e69eb4269",
-    //                 _id:"68cd4c998522ac2e69eb4269",
-    //                 paranoId:false
-    //             },
-    //         })
-    //         if(!user){
-    //             throw new Error("User not Found")
-    //         }
-    //         console.log({user});
-    //         // user.deleteAt=new Date(Date.now())
-    //         // await user.save()
-
-            
-    //     } catch (error) {
-    //         console.log({error});
-            
-    //     }
-
-    // }
-
-    // test()
-    app.listen(port,()=>{
+    const httpServer=app.listen(port,()=>{
         console.log("Server is running on port: " + port);
         
     })
+
+    inilialize(httpServer)
 }
