@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ChatGatewaay = void 0;
+exports.ChatGateway = void 0;
 const chat_events_1 = require("./chat.events");
-class ChatGatewaay {
+class ChatGateway {
     chatEvent = new chat_events_1.ChatEvent();
     constructor() { }
     register = (socket) => {
-        this.chatEvent.sayHi(socket);
+        this.chatEvent.sendMessage(socket);
     };
 }
-exports.ChatGatewaay = ChatGatewaay;
+exports.ChatGateway = ChatGateway;

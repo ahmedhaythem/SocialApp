@@ -9,9 +9,10 @@ export class ChatEvent{
     constructor(){}
 
 
-    sayHi=(socket:AuthenticationSocket)=>{
-        socket.on('sayHi',(message:string, callback:Function)=>{
-            return this.chatSocketServieces.sayHi(message,callback)
+    sendMessage=async(socket:AuthenticationSocket )=>{
+        socket.on("sendMessage",(data)=>{
+            return this.chatSocketServieces.sendMessage(socket, data)
         })
+
     }
 }

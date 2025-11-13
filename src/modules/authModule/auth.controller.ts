@@ -4,8 +4,11 @@ import { AuthServices } from './auth.service';
 import { Router } from "express";
 import * as authValidation from './auth.validation';
 import { uploadFile } from '../../utils/multer/multer';
+import { chatRouter } from '../chatModule';
 const router= Router()
 
+
+router.use('/:userId/chat',chatRouter)
 const authServices=new AuthServices()
 
 

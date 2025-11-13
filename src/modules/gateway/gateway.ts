@@ -3,7 +3,7 @@ import { IUser } from "../../DB/models/user.model"
 import { Server, Socket } from "socket.io"
 import {Server as httpServer} from "node:http"
 import { decodeToken, TokenTypesEnum } from "../../middleware/auth.middleware"
-import { ChatGatewaay } from "../chatModule/chat.gateway"
+import { ChatGateway } from "../chatModule/chat.gateway"
 
 
 export interface AuthenticationSocket extends Socket{
@@ -37,7 +37,7 @@ const disconnect=(socket:AuthenticationSocket)=>{
 
 
 export const inilialize=(httpServer:httpServer)=>{
-    const chatGateway=new ChatGatewaay()
+    const chatGateway=new ChatGateway()
 
     const io=new Server(httpServer,{
         cors:{

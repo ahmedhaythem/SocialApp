@@ -20,7 +20,7 @@ const disconnect = (socket) => {
     });
 };
 const inilialize = (httpServer) => {
-    const chatGateway = new chat_gateway_1.ChatGatewaay();
+    const chatGateway = new chat_gateway_1.ChatGateway();
     const io = new socket_io_1.Server(httpServer, {
         cors: {
             origin: '*'

@@ -4,10 +4,10 @@ import { AuthenticationSocket } from "../gateway/gateway";
 
 
 
-export class ChatGatewaay{
+export class ChatGateway{
     private chatEvent=new ChatEvent()
     constructor(){}
     register=(socket:AuthenticationSocket )=>{
-        this.chatEvent.sayHi(socket)
+        this.chatEvent.sendMessage(socket)
     }
 }
